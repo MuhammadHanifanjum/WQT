@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>📈 Financial Formulas · Interactive</title>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        body {
+            background: #f4f7fc;
+            margin: 0;
+            padding: 24px;
+            color: #0b1a2e;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-weight: 600;
+            font-size: 2.2rem;
+            letter-spacing: -0.02em;
+            margin: 0 0 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .subhead {
+            color: #2c3e50;
+            margin-top: -4px;
+            margin-bottom: 28px;
+            padding-left: 16px;
+            border-left: 4px solid #3b82f6;
+            background: #eef4ff;
+            border-radius: 0 12px 12px 0;
+            padding: 8px 16px;
+            font-weight: 400;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 28px;
+            margin-bottom: 30px;
+        }
+        @media (max-width: 1000px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .card {
+            background: white;
+            border-radius: 28px;
+            padding: 20px 22px 24px;
+            box-shadow: 0 8px 24px rgba(0, 20, 50, 0.06);
+            border: 1px solid #e9edf4;
+            transition: 0.15s;
+        }
+        .card h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .formula-badge {
+            background: #dbeafe;
+            color: #1e4b8a;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 2px 12px;
+            border-radius: 20px;
+            letter-spacing: 0.2px;
+            font-family: 'Courier New', monospace;
+        }
+        .slider-group {
+            margin: 10px 0 6px;
+        }
+        .slider-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #1e2f47;
+        }
+        .slider-group input {
+            width: 100%;
+            margin: 4px 0 2px;
+            accent-color: #2563eb;
+            height: 6px;
+            border-radius: 10px;
+            background: #dce3ec;
+        }
+        .value-display {
+            background: #f0f4fe;
+            padding: 0 12px;
+            border-radius: 30px;
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            background: #f0f6ff;
+            border-radius: 16px;
+            padding: 10px 16px;
+            margin: 12px 0 8px;
+            border: 1px solid #dce6f5;
+            flex-wrap: wrap;
+        }
+        .result-label {
+            font-weight: 500;
+            color: #1f3a6b;
+        }
+        .result-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #0a2540;
+            background: white;
+            padding: 0 16px;
+            border-radius: 40px;
+            line-height: 2.2rem;
+        }
+        .table-wrap {
+            overflow-x: auto;
+            margin: 10px 0 14px;
+            border-radius: 16px;
+            border: 1px solid #e9edf4;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            background: white;
+        }
+        th {
+            background: #f2f6fd;
+            font-weight: 600;
+            padding: 8px 6px;
+            text-align: center;
+            color: #1f3a6b;
+        }
+        td {
+            padding: 6px 6px;
+            text-align: center;
+            border-top: 1px solid #eef2f8;
+        }
+        .chart-wrapper {
+            background: white;
+            border-radius: 24px;
+            padding: 16px 18px 8px;
+            border: 1px solid #e9edf4;
+            margin: 6px 0 2px;
+            height: 200px;
+        }
+        .chart-wrapper canvas {
+            width: 100% !important;
+            height: 180px !important;
+        }
+        .inline-hint {
+            color: #4f658d;
+            font-size: 0.8rem;
+            margin-top: 4px;
+        }
+        .card-footer {
+            margin-top: 4px;
+            font-size: 0.75rem;
+            color: #5b6f8c;
+            border-top: 1px solid #eceff5;
+            padding-top: 8px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🧮 Financial Formulas · all terms</h1>
+    <div class="subhead">Each term + formula with dedicated sliders · live table + line chart</div>
+
+    <div class="grid" id="formulaGrid"></div>
+
+    <!-- hidden chart templates are inside cards, each card has its own canvas -->
+</div>
+
+<script>
+    (function() {
+        // ----- DEFINITIONS: each term has: id, label, symbol, description, sliders, computeFn, chartDataFn -----
+        const terms = [
+            {
+                id: 'simpleInterest',
+                label: 'Simple Interest',
+                symbol: 'P·r·n',
+                desc: 'Interest earned only on principal.',
+                sliders: [
+                    { key: 'P', label: 'Principal (P)', min: 100, max: 10000, step: 50, default: 1000 },
+                    { key: 'r', label: 'Rate (r) %', min: 0.5, max: 20, step: 0.1, default: 5 },
+                    { key: 'n', label: 'Term (n) years', min: 1, max: 20, step: 0.5, default: 5 }
+                ],
+                compute: (vals) => {
+                    const P = vals.P, r = vals.r / 100, n = vals.n;
+                    return { result: P * r * n, label: 'Interest ($)' };
+                },
+                chartData: (vals) => {
+                    const P = vals.P, r = vals.r / 100;
+                    const steps = 20;
+                    const labels = [], data = [];
+                    for (let i = 0; i <= steps; i++) {
+                        const n = (i / steps) * vals.n;
+                        labels.push(n.toFixed(1));
+                        data.push(P * r * n);
+                    }
+                    return { labels, data, label: 'Simple Interest' };
+                }
+            },
+            {
+                id: 'compoundInterest',
+                label: 'Compound Interest',
+                symbol: 'P(1+r)ᵗ − P',
+                desc: 'Interest on interest.',
+                sliders: [
+                    { key: 'P', label: 'Principal (P)', min: 100, max: 10000, step: 50, default: 1000 },
+                    { key: 'r', label: 'Rate (r) %', min: 0.5, max: 20, step: 0.1, default: 5 },
+                    { key: 't', label: 'Years (t)', min: 1, max: 20, step: 0.5, default: 5 }
+                ],
+                compute: (vals) => {
+                    const P = vals.P, r = vals.r / 100, t = vals.t;
+                    return { result: P * Math.pow(1 + r, t) - P, label: 'Interest ($)' };
+                },
+                chartData: (vals) => {
+                    const P = vals.P, r = vals.r / 100;
+                    const steps = 20;
+                    const labels = [], data = [];
+                    for (let i = 0; i <= steps; i++) {
+                        const t = (i / steps) * vals.t;
+                        labels.push(t.toFixed(1));
+                        data.push(P * Math.pow(1 + r, t) - P);
+                    }
+                    return { labels, data, label: 'Compound Interest' };
+                }
+            },
+            {
+                id: 'fv',
+                label: 'Future Value (FV)',
+                symbol: 'PV·(1+r)ᵗ',
+                desc: 'Total value after compound growth.',
+                sliders: [
+                    { key: 'PV', label: 'Present Value (PV)', min: 100, max: 10000, step: 50, default: 1000 },
+                    { key: 'r', label: 'Rate (r) %', min: 0.5, max: 20, step: 0.1, default: 5 },
+                    { key: 't', label: 'Years (t)', min: 1, max: 20, step: 0.5, default: 5 }
+                ],
+                compute: (vals) => {
+                    const PV = vals.PV, r = vals.r / 100, t = vals.t;
+                    return { result: PV * Math.pow(1 + r, t), label: 'Future Value ($)' };
+                },
+                chartData: (vals) => {
+                    const PV = vals.PV, r = vals.r / 100;
+                    const steps = 20;
+                    const labels = [], data = [];
+                    for (let i = 0; i <= steps; i++) {
+                        const t = (i / steps) * vals.t;
+                        labels.push(t.toFixed(1));
+                        data.push(PV * Math.pow(1 + r, t));
+                    }
+                    return { labels, data, label: 'FV' };
+                }
+            },
+            {
+                id: 'pv',
+                label: 'Present Value (PV)',
+                symbol: 'FV / (1+r)ᵗ',
+                desc: 'Value today of a future amount.',
+                sliders: [
+                    { key: 'FV', label: 'Future Value (FV)', min: 100, max: 20000, step: 100, default: 2000 },
+                    { key: 'r', label: 'Rate (r) %', min: 0.5, max: 20, step: 0.1, default: 5 },
+                    { key: 't', label: 'Years (t)', min: 1, max: 20, step: 0.5, default: 5 }
+                ],
+                compute: (vals) => {
+                    const FV = vals.FV, r = vals.r / 100, t = vals.t;
+                    return { result: FV / Math.pow(1 + r, t), label: 'Present Value ($)' };
+                },
+                chartData: (vals) => {
+                    const FV = vals.FV, r = vals.r / 100;
+                    const steps = 20;
+                    const labels = [], data = [];
+                    for (let i = 0; i <= steps; i++) {
+                        const t = (i / steps) * vals.t;
+                        labels.push(t.toFixed(1));
+                        data.push(FV / Math.pow(1 + r, t));
+                    }
+                    return { labels, data, label: 'PV' };
+                }
+            },
+            {
+                id: 'rate',
+                label: 'Interest Rate (r)',
+                symbol: '(FV/PV)^(1/t)−1',
+                desc: 'Effective annual return.',
+                sliders: [
+                    { key: 'PV', label: 'Present Value (PV)', min: 100, max: 10000, step: 50, default: 1000 },
+                    { key: 'FV', label: 'Future Value (FV)', min: 100, max: 20000, step: 100, default: 1500 },
+                    { key: 't', label: 'Years (t)', min: 1, max: 20, step: 0.5, default: 3 }
+                ],
+                compute: (vals) => {
+                    const PV = vals.PV, FV = vals.FV, t = vals.t;
+                    if (PV <= 0 || FV <= 0) return { result: 0, label: 'Rate (%)' };
+                    const r = Math.pow(FV / PV, 1 / t) - 1;
+                    return { result: r * 100, label: 'Rate (%)' };
+                },
+                chartData: (vals) => {
+                    const PV = vals.PV, FV = vals.FV;
+                    const steps = 20;
+                    const labels = [], data = [];
+                    for (let i = 1; i <= steps; i++) {
+                        const t = (i / steps) * vals.t;
+                        if (t === 0) continue;
+                        const r = Math.pow(FV / PV, 1 / t) - 1;
+                        labels.push(t.toFixed(1));
+                        data.push(r * 100);
+                    }
+                    return { labels, data, label: 'Rate (%)' };
+                }
+            },
+            {
+                id: 'convertRate',
+                label: 'Convert Rate (q ← m)',
+                symbol: 'q·[(1+rₘ/m)^(m/q)−1]',
+                desc: 'Equivalent nominal rate (annual).',
+                sliders: [
+                    { key: 'rm', label: 'rₘ (nominal %)', min: 1, max: 20, step: 0.1, default: 5 },
+                    { key: 'm', label: 'm (comp/yr)', min: 1, max: 12, step: 1, default: 12 },
+                    { key: 'q', label: 'q (target comp/yr)', min: 1, max: 12, step: 1, default: 4 }
+                ],
+                compute: (vals) => {
+                    const rm = vals.rm / 100, m = vals.m, q = vals.q;
+                    const rq = q * (Math.pow(1 + rm / m, m / q) - 1);
+                    return { result: rq * 100, label: 'r_q (%)' };
+                },
+                chartData: (vals) => {
+                    const rm = vals.rm / 100, m = vals.m;
+                    const steps = 12;
+                    const labels = [], data = [];
+                    for (let i = 1; i <= steps; i++) {
+                        const q = i;
+                        const rq = q * (Math.pow(1 + rm / m, m / q) - 1);
+                        labels.push(q);
+                        data.push(rq * 100);
+                    }
+                    return { labels, data, label: 'r_q (%)' };
+                }
+            },
+            {
+                id: 'fvCompQ',
+                label: 'FV (q comp/yr)',
+                symbol: 'PV·(1+r/q)^(q·t)',
+                desc: 'Future value with q compounding periods.',
+                sliders: [
+                    { key: 'PV', label: 'PV', min: 100, max: 10000, step: 50, default: 1000 },
+                    { key: 'r', label: 'Rate (r) %', min: 0.5, max: 20, step: 0.1, default: 5 },
+                    { key: 't', label: 'Years (t)', min: 1, max: 20, step: 0.5, default: 5 },
+                    { key: 'q', label: 'q (comp/yr)', min: 1, max: 12, step: 1, default: 4 }
+                ],
+                compute: (vals) => {
+                    const PV = vals.PV, r = vals.r / 100, t = vals.t, q = vals.q;
+                    return { result: PV * Math.pow(1 + r / q, q * t), label: 'FV ($)' };
+                },
+                chartData: (vals) => {
+                    const PV = vals.PV, r = vals.r / 100, q = vals.q;
+                    const steps = 20;
+                    const labels = [], data = [];
+                    for (let i = 0; i <= steps; i++) {
+                        const t = (i / steps) * vals.t;
+                        labels.push(t.toFixed(1));
+                        data.push(PV * Math.pow(1 + r / q, q * t));
+                    }
+                    return { labels, data, label: 'FV (q comp)' };
+                }
+            },
+            {
+                id: 'fvCont',
+                label: 'FV (continuous)',
+                symbol: 'PV·e^(r·t)',
+                desc: 'Continuous compounding limit.',
+                sliders: [
+                    { key: 'PV', label: 'PV', min: 100, max: 10000, step: 50, default: 1000 },
+                    { key: 'r', label: 'Rate (r) %', min: 0.5, max: 20, step: 0.1, default: 5 },
+                    { key: 't', label: 'Years (t)', min: 1, max: 20, step: 0.5, default: 5 }
+                ],
+                compute: (vals) => {
+                    const PV = vals.PV, r = vals.r / 100, t = vals.t;
+                    return { result: PV * Math.exp(r * t), label: 'FV ($)' };
+                },
+                chartData: (vals) => {
+                    const PV = vals.PV, r = vals.r / 100;
+                    const steps = 20;
+                    const labels = [], data = [];
+                    for (let i = 0; i <= steps; i++) {
+                        const t = (i / steps) * vals.t;
+                        labels.push(t.toFixed(1));
+                        data.push(PV * Math.exp(r * t));
+                    }
+                    return { labels, data, label: 'FV (continuous)' };
+                }
+            }
+        ];
+
+        // ----- build UI -----
+        const grid = document.getElementById('formulaGrid');
+        const chartInstances = {};
+
+        function buildCard(term) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.id = `card-${term.id}`;
+
+            // header
+            const header = document.createElement('h2');
+            header.innerHTML = `${term.label} <span class="formula-badge">${term.symbol}</span>`;
+            card.appendChild(header);
+
+            // description
+            const desc = document.createElement('div');
+            desc.className = 'inline-hint';
+            desc.textContent = term.desc;
+            card.appendChild(desc);
+
+            // sliders
+            const sliderValues = {};
+            term.sliders.forEach(s => {
+                const group = document.createElement('div');
+                group.className = 'slider-group';
+                const label = document.createElement('label');
+                const span = document.createElement('span');
+                span.textContent = s.label;
+                const valSpan = document.createElement('span');
+                valSpan.className = 'value-display';
+                valSpan.id = `val-${term.id}-${s.key}`;
+                valSpan.textContent = s.default;
+                label.appendChild(span);
+                label.appendChild(valSpan);
+                group.appendChild(label);
+
+                const input = document.createElement('input');
+                input.type = 'range';
+                input.min = s.min;
+                input.max = s.max;
+                input.step = s.step;
+                input.value = s.default;
+                input.dataset.key = s.key;
+                input.dataset.term = term.id;
+                group.appendChild(input);
+                card.appendChild(group);
+
+                sliderValues[s.key] = s.default;
+
+                // store reference
+                input.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    const key = e.target.dataset.key;
+                    const tid = e.target.dataset.term;
+                    document.getElementById(`val-${tid}-${key}`).textContent = val;
+                    updateCard(tid);
+                });
+            });
+
+            // result row
+            const resultRow = document.createElement('div');
+            resultRow.className = 'result-row';
+            const rLabel = document.createElement('span');
+            rLabel.className = 'result-label';
+            rLabel.textContent = 'Result:';
+            const rValue = document.createElement('span');
+            rValue.className = 'result-value';
+            rValue.id = `res-${term.id}`;
+            rValue.textContent = '—';
+            resultRow.appendChild(rLabel);
+            resultRow.appendChild(rValue);
+            card.appendChild(resultRow);
+
+            // table
+            const tableWrap = document.createElement('div');
+            tableWrap.className = 'table-wrap';
+            const table = document.createElement('table');
+            table.id = `table-${term.id}`;
+            tableWrap.appendChild(table);
+            card.appendChild(tableWrap);
+
+            // chart
+            const chartWrap = document.createElement('div');
+            chartWrap.className = 'chart-wrapper';
+            const canvas = document.createElement('canvas');
+            canvas.id = `chart-${term.id}`;
+            chartWrap.appendChild(canvas);
+            card.appendChild(chartWrap);
+
+            grid.appendChild(card);
+
+            // store slider values for later
+            term._sliderValues = sliderValues;
+            term._card = card;
+            term._table = table;
+            term._canvas = canvas;
+            term._resultSpan = rValue;
+
+            // initial update
+            updateCard(term.id);
+        }
+
+        function getSliderValues(termId) {
+            const term = terms.find(t => t.id === termId);
+            if (!term) return {};
+            const vals = {};
+            term.sliders.forEach(s => {
+                const input = document.querySelector(`#card-${termId} input[data-key="${s.key}"]`);
+                if (input) vals[s.key] = parseFloat(input.value);
+                else vals[s.key] = s.default;
+            });
+            return vals;
+        }
+
+        function updateCard(termId) {
+            const term = terms.find(t => t.id === termId);
+            if (!term) return;
+            const vals = getSliderValues(termId);
+            // compute
+            const { result, label } = term.compute(vals);
+            const resultSpan = document.getElementById(`res-${termId}`);
+            if (resultSpan) {
+                const display = (typeof result === 'number' && isFinite(result)) 
+                    ? result.toFixed(4) 
+                    : '—';
+                resultSpan.textContent = display + (label.includes('%') ? ' %' : ' $');
+            }
+
+            // update table
+            const table = document.getElementById(`table-${termId}`);
+            if (table) {
+                const chartData = term.chartData(vals);
+                // build header: variable name (first slider) and result
+                let headerRow = '<tr><th>Step</th><th>Value</th></tr>';
+                let bodyRows = '';
+                chartData.labels.forEach((lbl, idx) => {
+                    const val = chartData.data[idx];
+                    bodyRows += `<tr><td>${lbl}</td><td>${val.toFixed(2)}</td></tr>`;
+                });
+                table.innerHTML = headerRow + bodyRows;
+            }
+
+            // update chart
+            const canvas = document.getElementById(`chart-${termId}`);
+            if (canvas) {
+                const chartData = term.chartData(vals);
+                const ctx = canvas.getContext('2d');
+                if (chartInstances[termId]) {
+                    chartInstances[termId].destroy();
+                }
+                chartInstances[termId] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: chartData.labels,
+                        datasets: [{
+                            label: term.label,
+                            data: chartData.data,
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37,99,235,0.05)',
+                            borderWidth: 2.5,
+                            tension: 0.2,
+                            pointRadius: 1,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => `${ctx.parsed.y.toFixed(2)}`
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { title: { display: true, text: 'Time / period' } },
+                            y: { beginAtZero: true, title: { display: true, text: 'Value' } }
+                        }
+                    }
+                });
+            }
+        }
+
+        // build all cards
+        terms.forEach(t => buildCard(t));
+
+        // expose update for any external use (none)
+        window.updateAll = function() {
+            terms.forEach(t => updateCard(t.id));
+        };
+    })();
+</script>
+</body>
+</html>
